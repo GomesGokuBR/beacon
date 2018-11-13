@@ -1,5 +1,5 @@
 var exec = require('cordova/exec');
 
-exports.coolMethod = function (arg0, success, error) {
-    exec(success, error, 'Beacon', 'coolMethod', [arg0]);
+exports.scan = function (arg0, success, error) {
+    exec(success, error, 'Beacon', 'scan', [arg0]);
 };
