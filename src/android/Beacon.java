@@ -1,13 +1,18 @@
 package cordova.plugin.beacon;
 
+import android.annotation.TargetApi;
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
+import android.content.Context;
 import android.os.Build;
 import android.support.annotation.RequiresApi;
+import android.util.Base64;
 
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
@@ -17,6 +22,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,8 +32,8 @@ import java.util.List;
  */
 public class Beacon extends CordovaPlugin {
 
+    private Boolean etatAdapterBLE = true;
     private BluetoothAdapter bluetoothAdapter;
-    private Boolean etatAdapterBLE = false;
 
     // callbacks
     CallbackContext discoverBLECallbackContext;
@@ -45,6 +51,7 @@ public class Beacon extends CordovaPlugin {
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void scan(JSONArray args, CallbackContext callbackContext)
     {
+        initBluetoothAdapter();
         if(this.etatAdapterBLE)
         {
           try{
@@ -68,10 +75,35 @@ public class Beacon extends CordovaPlugin {
     }
 
     private ScanCallback mScanCallback = new ScanCallback() {
+      @TargetApi(Build.VERSION_CODES.O)
       @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
       @Override
       public void onScanResult(int callbackType, ScanResult result) {
-        PluginResult result1 = new PluginResult(PluginResult.Status.OK, result.getScanRecord().getBytes());
+        JSONObject obj = new JSONObject();
+        JSONObject axes = new JSONObject();
+
+        byte [] bytes = result.getScanRecord().getBytes();
+        int axeX = ((bytes[4] * 256) + bytes[5]);
+        int axeY = ((bytes[6] * 256) + bytes[7]);
+        int axeZ = ((bytes[8] * 256) + bytes[9]);
+        try {
+          axes.put("x", axeX);
+          axes.put("y", axeY);
+          axes.put("z", axeZ);
+        } catch (JSONException e) {
+          e.getMessage();
+        }
+
+        try {
+            obj.put("name", result.getDevice().getAddress());
+            obj.put("rssi", result.getRssi());
+            obj.put("advertising", axes);
+          } catch (JSONException e) {
+            PluginResult result1 = new PluginResult(PluginResult.Status.OK, e.getMessage());
+            result1.setKeepCallback(true);
+            discoverBLECallbackContext.sendPluginResult(result1);
+          }
+        PluginResult result1 = new PluginResult(PluginResult.Status.OK, obj);
         result1.setKeepCallback(true);
         discoverBLECallbackContext.sendPluginResult(result1);
       }
@@ -81,7 +113,7 @@ public class Beacon extends CordovaPlugin {
     private ScanSettings getScanSettings(){
       ScanSettings.Builder builder = new ScanSettings.Builder();
       builder.setReportDelay(0);
-      builder.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
+      builder.setScanMode(ScanSettings.MATCH_MODE_AGGRESSIVE);
       return builder.build();
     }
 
@@ -98,4 +130,27 @@ public class Beacon extends CordovaPlugin {
       builder.setManufacturerData(65534, manData.array(), manMask.array()); //Is this id correct?
       return builder.build();
     }
+
+    private void initBluetoothAdapter() {
+      Activity activity = cordova.getActivity();
+      final BluetoothManager bluetoothManager = (BluetoothManager) activity.getSystemService(Context.BLUETOOTH_SERVICE);
+      bluetoothAdapter = bluetoothManager.getAdapter();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    static JSONObject scanResultToJson(ScanResult result) throws JSONException {
+      JSONObject object = new JSONObject();
+      JSONObject subObject = new JSONObject();
+      byte [] dataAdvertising = result.getScanRecord().getBytes();
+      try {
+        if(!result.getDevice().getName().equals(""))
+          object.put("Name", result.getDevice().getName());
+          object.put("id", result.getDevice().getAddress());
+          object.put("axex", subObject);
+      }catch (Exception e){
+
+      }
+      return object;
+    }
+
 }
