@@ -81,7 +81,12 @@ public class Beacon extends CordovaPlugin {
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     public void onScanResult(int callbackType, ScanResult result) {
-      if(result.getDevice().getAddress().equals("03:80:E1:00:34:15")) {
+      String mac = result.getDevice().getAddress();
+      if(mac.equals("03:80:E1:00:34:12") || mac.equals("03:80:E1:00:34:13") || mac.equals("03:80:E1:00:34:14")
+          || mac.equals("03:80:E1:00:34:15") || mac.equals("03:80:E1:00:34:16") || mac.equals("03:80:E1:00:34:17")
+          || mac.equals("03:80:E1:00:34:18") ||mac.equals("03:80:E1:00:34:19") || mac.equals("03:80:E1:00:34:20")
+        )
+      {
 
         JSONObject obj = new JSONObject();
         JSONObject axes = new JSONObject();
