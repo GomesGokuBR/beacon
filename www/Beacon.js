@@ -1,7 +1,7 @@
 var exec = require('cordova/exec');
 
-exports.initAdaper = function (arg0, success, error) {
-    exec(success, error, 'Beacon', 'initAdaper', [arg0]);
+exports.initAdapter = function (arg0, success, error) {
+    exec(success, error, 'Beacon', 'initAdapter', [arg0]);
 };
 
 exports.scan = function (arg0, success, error) {
