@@ -42,16 +42,38 @@ public class Beacon extends CordovaPlugin {
 
   @Override
   public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-    if (action.equals("scan")) {
-      String message = args.getString(0);
-      this.scan(args, callbackContext);
+    if(action.equals("initAdaper")){
+      this.initAdaper(callbackContext);
       return true;
     }
-    if(action.equals("isDiscovering")){
-      this.isDiscovering(callbackContext);
-      return true;
+    if (action.equals("scan")) {
+        String message = args.getString(0);
+        this.scan(args, callbackContext);
+        return true;
+    }
+    if (action.equals("stopScan")) {
+        String message = args.getString(0);
+        this.scan(args, callbackContext);
+        return true;
+    }
+    if (action.equals("enableBLE")) {
+        String message = args.getString(0);
+        this.scan(args, callbackContext);
+        return true;
+    }
+    if (action.equals("purgeBLE")) {
+        String message = args.getString(0);
+        this.scan(args, callbackContext);
+        return true;
     }
     return false;
+  }
+
+  private void initAdaper(JSONArray args, CallbackContext callbackContext)
+  {
+    PluginResult result = new PluginResult(PluginResult.Status.OK, "initAdaper ok");
+    result1.setKeepCallback(true);
+    discoverBLECallbackContext.sendPluginResult(result);
   }
 
   @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
@@ -78,6 +100,27 @@ public class Beacon extends CordovaPlugin {
     else{
       callbackContext.error("Les conditions de demarrage de la BLE ne sont pas remplis");
     }
+  }
+
+  private void stopScan(JSONArray args, CallbackContext callbackContext)
+  {
+    PluginResult result = new PluginResult(PluginResult.Status.OK, "stopScan ok");
+    result1.setKeepCallback(true);
+    discoverBLECallbackContext.sendPluginResult(result);
+  }
+
+  private void enableBLE(JSONArray args, CallbackContext callbackContext)
+  {
+    PluginResult result = new PluginResult(PluginResult.Status.OK, "enable BLE ok");
+    result1.setKeepCallback(true);
+    discoverBLECallbackContext.sendPluginResult(result);
+  }
+
+  private void purgeBLE(JSONArray args, CallbackContext callbackContext)
+  {
+    PluginResult result = new PluginResult(PluginResult.Status.OK, "purge BLE ok");
+    result1.setKeepCallback(true);
+    discoverBLECallbackContext.sendPluginResult(result);
   }
 
   private ScanCallback mScanCallback = new ScanCallback() {
@@ -171,7 +214,7 @@ public class Beacon extends CordovaPlugin {
     bluetoothAdapter = bluetoothManager.getAdapter();
   }
 
-  private void isDiscovering(CallbackContext callbackContext){
+  private void initAdaper(CallbackContext callbackContext){
     callbackContext.success("hello");
   }
 
