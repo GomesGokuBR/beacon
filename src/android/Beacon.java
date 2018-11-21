@@ -47,6 +47,10 @@ public class Beacon extends CordovaPlugin {
       this.scan(args, callbackContext);
       return true;
     }
+    if(action.equals("isDiscovering")){
+      this.isDiscovering(callbackContext);
+      return true;
+    }
     return false;
   }
 
@@ -165,6 +169,10 @@ public class Beacon extends CordovaPlugin {
     Activity activity = cordova.getActivity();
     final BluetoothManager bluetoothManager = (BluetoothManager) activity.getSystemService(Context.BLUETOOTH_SERVICE);
     bluetoothAdapter = bluetoothManager.getAdapter();
+  }
+
+  private void isDiscovering(CallbackContext callbackContext){
+    callbackContext.success("hello");
   }
 
   @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
