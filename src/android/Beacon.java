@@ -72,8 +72,8 @@ public class Beacon extends CordovaPlugin {
   private void initAdaper(JSONArray args, CallbackContext callbackContext)
   {
     PluginResult result = new PluginResult(PluginResult.Status.OK, "initAdaper ok");
-    result1.setKeepCallback(true);
-    discoverBLECallbackContext.sendPluginResult(result);
+    result.setKeepCallback(true);
+    callbackContext.sendPluginResult(result);
   }
 
   @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
@@ -105,22 +105,22 @@ public class Beacon extends CordovaPlugin {
   private void stopScan(JSONArray args, CallbackContext callbackContext)
   {
     PluginResult result = new PluginResult(PluginResult.Status.OK, "stopScan ok");
-    result1.setKeepCallback(true);
-    discoverBLECallbackContext.sendPluginResult(result);
+    result.setKeepCallback(true);
+    callbackContext.sendPluginResult(result);
   }
 
   private void enableBLE(JSONArray args, CallbackContext callbackContext)
   {
     PluginResult result = new PluginResult(PluginResult.Status.OK, "enable BLE ok");
-    result1.setKeepCallback(true);
-    discoverBLECallbackContext.sendPluginResult(result);
+    result.setKeepCallback(true);
+    callbackContext.sendPluginResult(result);
   }
 
   private void purgeBLE(JSONArray args, CallbackContext callbackContext)
   {
     PluginResult result = new PluginResult(PluginResult.Status.OK, "purge BLE ok");
-    result1.setKeepCallback(true);
-    discoverBLECallbackContext.sendPluginResult(result);
+    result.setKeepCallback(true);
+    callbackContext.sendPluginResult(result);
   }
 
   private ScanCallback mScanCallback = new ScanCallback() {
