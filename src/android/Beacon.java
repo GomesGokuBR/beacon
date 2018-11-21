@@ -10,9 +10,11 @@ import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Build;
 import android.support.annotation.RequiresApi;
 import android.util.Base64;
+import android.util.JsonReader;
 
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
@@ -34,7 +36,7 @@ import java.util.List;
 public class Beacon extends CordovaPlugin {
 
   private Boolean etatAdapterBLE = true;
-  private BluetoothAdapter bluetoothAdapter;
+  private BluetoothAdapter bluetoothAdapter = null;
   private BluetoothLeScanner bluetoothLeScanner;
 
   // callbacks
@@ -42,104 +44,170 @@ public class Beacon extends CordovaPlugin {
 
   @Override
   public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-    if(action.equals("initAdaper")){
-      this.initAdaper(callbackContext);
+    if (action.equals("initAdapter")) {
+      this.initAdapter(callbackContext);
       return true;
     }
     if (action.equals("scan")) {
-        String message = args.getString(0);
-        this.scan(args, callbackContext);
-        return true;
+      this.scan(callbackContext);
+      return true;
     }
     if (action.equals("stopScan")) {
-        String message = args.getString(0);
-        this.scan(args, callbackContext);
-        return true;
+      this.stopScan(callbackContext);
+      return true;
     }
     if (action.equals("enableBLE")) {
-        String message = args.getString(0);
-        this.scan(args, callbackContext);
-        return true;
+      boolean turnBLE = args.getJSONObject(0).getBoolean("turn");
+      this.enableBLE(turnBLE, callbackContext);
+      return true;
     }
     if (action.equals("purgeBLE")) {
-        String message = args.getString(0);
-        this.scan(args, callbackContext);
-        return true;
+      this.purgeBLE(callbackContext);
+      return true;
     }
     return false;
   }
 
-  private void initAdaper(JSONArray args, CallbackContext callbackContext)
-  {
-    PluginResult result = new PluginResult(PluginResult.Status.OK, "initAdaper ok");
-    result.setKeepCallback(true);
-    callbackContext.sendPluginResult(result);
+  private void initAdapter(CallbackContext callbackContext) throws JSONException {
+    JSONObject jsonResponse = new JSONObject();
+    if (this.bluetoothAdapter == null) {
+      Activity activity = cordova.getActivity();
+      final BluetoothManager bluetoothManager = (BluetoothManager) activity.getSystemService(Context.BLUETOOTH_SERVICE);
+      try {
+        bluetoothAdapter = bluetoothManager.getAdapter();
+        jsonResponse.put("error", false);
+        if (this.bluetoothAdapter.isEnabled())
+          jsonResponse.put("bleIsActived", true);
+        else
+          jsonResponse.put("bleIsActived", false);
+        callbackContext.success(jsonResponse);
+      } catch (Exception e) {
+        jsonResponse.put("error", true);
+        jsonResponse.put("bleIsSupported", false);
+        jsonResponse.put("message", e.getMessage());
+        callbackContext.success(jsonResponse);
+      }
+    } else {
+      jsonResponse.put("error", false);
+      jsonResponse.put("message", "Probleme avec la func initAdapter");
+    }
   }
 
   @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-  private void scan(JSONArray args, CallbackContext callbackContext)
-  {
-    initBluetoothAdapter();
-    if(this.etatAdapterBLE)
-    {
-      try{
-        this.discoverBLECallbackContext = callbackContext;
+  private void scan(CallbackContext callbackContext) throws JSONException {
+    JSONObject jsonResponse = new JSONObject();
+    if (this.etatAdapterBLE) {
+      if (this.bluetoothAdapter.isEnabled()) {
+        try {
+          jsonResponse.put("error", false);
+          this.discoverBLECallbackContext = callbackContext;
 
-        bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
-        ScanFilter filter = getScanFilter();
-        List<ScanFilter> scanFilters = new ArrayList<ScanFilter>();
-        //scanFilters.add(filter);
-        ScanSettings scanSettings = getScanSettings();
-
-        bluetoothLeScanner.startScan(scanFilters, scanSettings, mScanCallback);
-
-      } catch (Exception e){
-        callbackContext.error("Probleme durant la procedure de scan : " + e.getMessage());
+          bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
+          ScanFilter filter = getScanFilter();
+          List<ScanFilter> scanFilters = new ArrayList<ScanFilter>();
+          // scanFilters.add(filter);
+          ScanSettings scanSettings = getScanSettings();
+          bluetoothLeScanner.startScan(scanFilters, scanSettings, mScanCallback);
+        } catch (Exception e) {
+          jsonResponse.put("error", true);
+          jsonResponse.put("message", "Probleme durant la procedure de scan : " + e.getMessage());
+          PluginResult result = new PluginResult(PluginResult.Status.OK, jsonResponse);
+          result.setKeepCallback(true);
+          callbackContext.sendPluginResult(result);
+        }
+      } else {
+        jsonResponse.put("error", true);
+        jsonResponse.put("bleIsActived", false);
+        PluginResult result = new PluginResult(PluginResult.Status.OK, jsonResponse);
+        result.setKeepCallback(true);
+        callbackContext.sendPluginResult(result);
       }
+    } else {
+      jsonResponse.put("error", true);
+      jsonResponse.put("initAdapter", false);
+      PluginResult result = new PluginResult(PluginResult.Status.OK, jsonResponse);
+      result.setKeepCallback(true);
+      callbackContext.sendPluginResult(result);
     }
-    else{
-      callbackContext.error("Les conditions de demarrage de la BLE ne sont pas remplis");
+  }
+
+  private void stopScan(CallbackContext callbackContext) throws JSONException {
+    JSONObject jsonResponse = new JSONObject();
+    if (this.etatAdapterBLE) {
+      jsonResponse.put("error", false);
+      if (this.bluetoothAdapter.isEnabled()) {
+        this.bluetoothAdapter.getBluetoothLeScanner().stopScan(mScanCallback);
+        jsonResponse.put("blsIsActived", true);
+      } else
+        jsonResponse.put("blsIsActived", false);
+    } else {
+      jsonResponse.put("error", true);
+      jsonResponse.put("initAdapter", false);
     }
+    callbackContext.success(jsonResponse);
   }
 
-  private void stopScan(JSONArray args, CallbackContext callbackContext)
-  {
-    PluginResult result = new PluginResult(PluginResult.Status.OK, "stopScan ok");
-    result.setKeepCallback(true);
-    callbackContext.sendPluginResult(result);
+  private void enableBLE(Boolean turnBLE, CallbackContext callbackContext) throws JSONException {
+    JSONObject jsonResponse = new JSONObject();
+    if (this.etatAdapterBLE) {
+      jsonResponse.put("error", false);
+      if (turnBLE) {
+        if (!bluetoothAdapter.isEnabled())
+          this.bluetoothAdapter.enable();
+        jsonResponse.put("blsIsActived", true);
+      } else {
+        if (bluetoothAdapter.isEnabled())
+          this.bluetoothAdapter.disable();
+        jsonResponse.put("blsIsActived", false);
+      }
+    } else {
+      jsonResponse.put("error", true);
+      jsonResponse.put("initAdapter", false);
+    }
+    callbackContext.success(jsonResponse);
   }
 
-  private void enableBLE(JSONArray args, CallbackContext callbackContext)
-  {
-    PluginResult result = new PluginResult(PluginResult.Status.OK, "enable BLE ok");
-    result.setKeepCallback(true);
-    callbackContext.sendPluginResult(result);
-  }
-
-  private void purgeBLE(JSONArray args, CallbackContext callbackContext)
-  {
-    PluginResult result = new PluginResult(PluginResult.Status.OK, "purge BLE ok");
+  private void purgeBLE(CallbackContext callbackContext) throws JSONException {
+    JSONObject jsonResponse = new JSONObject();
+    if (this.etatAdapterBLE) {
+      jsonResponse.put("error", false);
+      if (this.bluetoothAdapter.isEnabled()) {
+        jsonResponse.put("purgeBLE", true);
+        jsonResponse.put("blsIsActived", true);
+        this.bluetoothAdapter.getBluetoothLeScanner().flushPendingScanResults(mScanCallback);
+      } else {
+        jsonResponse.put("purgeBLE", false);
+        jsonResponse.put("blsIsActived", false);
+      }
+    } else {
+      jsonResponse.put("error", true);
+      jsonResponse.put("initAdapter", false);
+    }
+    PluginResult result = new PluginResult(PluginResult.Status.OK, jsonResponse);
     result.setKeepCallback(true);
     callbackContext.sendPluginResult(result);
   }
 
   private ScanCallback mScanCallback = new ScanCallback() {
-    @TargetApi(Build.VERSION_CODES.O)
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     public void onScanResult(int callbackType, ScanResult result) {
       String mac = result.getDevice().getAddress();
-      if(mac.equals("03:80:E1:00:34:12") || mac.equals("03:80:E1:00:34:13") || mac.equals("03:80:E1:00:34:14")
-          || mac.equals("03:80:E1:00:34:15") || mac.equals("03:80:E1:00:34:16") || mac.equals("03:80:E1:00:34:17")
-          || mac.equals("03:80:E1:00:34:18") ||mac.equals("03:80:E1:00:34:19") || mac.equals("03:80:E1:00:34:20")
-        )
-      {
+      if (mac.equals("03:80:E1:00:34:12") || mac.equals("03:80:E1:00:34:13") || mac.equals("03:80:E1:00:34:14")
+        || mac.equals("03:80:E1:00:34:15") || mac.equals("03:80:E1:00:34:16")
+        || mac.equals("03:80:E1:00:34:17") || mac.equals("03:80:E1:00:34:18")
+        || mac.equals("03:80:E1:00:34:19") || mac.equals("03:80:E1:00:34:20")) {
 
-        JSONObject obj = new JSONObject();
+        JSONObject jsonResponse = new JSONObject();
+
         JSONObject axes = new JSONObject();
-        JSONObject index = new JSONObject();
+        JSONObject axesN = new JSONObject();
+        JSONObject axesN1 = new JSONObject();
+        JSONObject axesN2 = new JSONObject();
 
         byte[] bytes = result.getScanRecord().getBytes();
+
+        //Axex N
         int axeX = bytes[5];
         axeX += bytes[4] << 8;
         int axeY = bytes[7];
@@ -147,39 +215,62 @@ public class Beacon extends CordovaPlugin {
         int axeZ = bytes[9];
         axeZ += bytes[8] << 8;
 
-        int index1 = (bytes[10] & 0xFF);
-        int index2 = (bytes[11] & 0xFF);
-        int index3 = (bytes[12] & 0xFF);
-        int index4 = (bytes[13] & 0xFF);
-        int res =  index1 + (index2 * 256) + (index3 * index2) + (index3 * index4);
+        //AxesN-1
+        int axeXn1 = bytes[9];
+        axeXn1 += bytes[10] << 8;
+        int axeYn1 = bytes[11];
+        axeYn1 += bytes[12] << 8;
+        int axeZn1 = bytes[13];
+        axeZn1 += bytes[14] << 8;
 
-        int i = bytes[10];
-        i += bytes[11] << 8;
-        i += bytes[12] << 16;
-        i += bytes[13] << 24;
+        //AxesN-1
+        int axeXn2 = bytes[15];
+        axeXn2 += bytes[16] << 8;
+        int axeYn2 = bytes[17];
+        axeYn2 += bytes[18] << 8;
+        int axeZn2 = bytes[13];
+        axeZn2 += bytes[19] << 8;
+
+        //Index
+        int index = bytes[20];
+        index += bytes[21] << 8;
+        index += bytes[22] << 16;
+        index += bytes[23] << 24;
 
         try {
-          axes.put("x", axeX);
-          axes.put("y", axeY);
-          axes.put("z", axeZ);
-          index.put("index", i);
+          axesN.put("x", axeX);
+          axesN.put("y", axeY);
+          axesN.put("z", axeZ);
 
-        } catch (JSONException e) {
-          e.getMessage();
-        }
+          axesN1.put("xn1", axeXn1);
+          axesN1.put("yn1", axeYn1);
+          axesN1.put("zn1", axeZn1);
 
-        try {
-          obj.put("name", result.getDevice().getName());
-          obj.put("rssi", result.getRssi());
-          obj.put("id", result.getDevice().getAddress());
-          obj.put("advertising", axes);
-          obj.put("index", res);
+          axesN2.put("xn2", axeXn2);
+          axesN2.put("yn2", axeYn2);
+          axesN2.put("zn2", axeZn2);
+
+          axes.put("N", axesN);
+          axes.put("N1", axesN1);
+          axes.put("N2", axesN2);
         } catch (JSONException e) {
-          PluginResult result1 = new PluginResult(PluginResult.Status.OK, e.getMessage());
+          e.printStackTrace();
+          PluginResult result1 = new PluginResult(PluginResult.Status.OK, "Erreur decode payload : " + e.getMessage());
           result1.setKeepCallback(true);
           discoverBLECallbackContext.sendPluginResult(result1);
         }
-        PluginResult result1 = new PluginResult(PluginResult.Status.OK, obj);
+        try {
+          jsonResponse.put("name", result.getDevice().getName());
+          jsonResponse.put("rssi", result.getRssi());
+          jsonResponse.put("id", result.getDevice().getAddress());
+          jsonResponse.put("advertising", axes);
+          jsonResponse.put("index", index);
+        } catch (JSONException e) {
+          PluginResult result1 = new PluginResult(PluginResult.Status.OK, "Erreur create response : " + e.getMessage());
+          result1.setKeepCallback(true);
+          discoverBLECallbackContext.sendPluginResult(result1);
+        }
+        PluginResult result1 = new PluginResult(PluginResult.Status.OK, jsonResponse);
         result1.setKeepCallback(true);
         discoverBLECallbackContext.sendPluginResult(result1);
       }
@@ -187,7 +278,7 @@ public class Beacon extends CordovaPlugin {
   };
 
   @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-  private ScanSettings getScanSettings(){
+  private ScanSettings getScanSettings() {
     ScanSettings.Builder builder = new ScanSettings.Builder();
     builder.setReportDelay(0);
     builder.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
@@ -195,43 +286,16 @@ public class Beacon extends CordovaPlugin {
   }
 
   @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-  private ScanFilter getScanFilter(){
+  private ScanFilter getScanFilter() {
     ScanFilter.Builder builder = new ScanFilter.Builder();
-    ByteBuffer manData = ByteBuffer.allocate(2); //The sensors only sends 6 bytes right now
+    ByteBuffer manData = ByteBuffer.allocate(2); // The sensors only sends 6 bytes right now
     ByteBuffer manMask = ByteBuffer.allocate(2);
-    manData.put(0, (byte)0xFF);
-    manData.put(1, (byte)0xFE);
-    for(int i = 0; i < 2; i++){
-      manMask.put((byte)0x01);
+    manData.put(0, (byte) 0xFF);
+    manData.put(1, (byte) 0xFE);
+    for (int i = 0; i < 2; i++) {
+      manMask.put((byte) 0x01);
     }
-    builder.setManufacturerData(65534, manData.array(), manMask.array()); //Is this id correct?
+    builder.setManufacturerData(65534, manData.array(), manMask.array()); // Is this id correct?
     return builder.build();
   }
-
-  private void initBluetoothAdapter() {
-    Activity activity = cordova.getActivity();
-    final BluetoothManager bluetoothManager = (BluetoothManager) activity.getSystemService(Context.BLUETOOTH_SERVICE);
-    bluetoothAdapter = bluetoothManager.getAdapter();
-  }
-
-  private void initAdaper(CallbackContext callbackContext){
-    callbackContext.success("hello");
-  }
-
-  @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-  static JSONObject scanResultToJson(ScanResult result) throws JSONException {
-    JSONObject object = new JSONObject();
-    JSONObject subObject = new JSONObject();
-    byte [] dataAdvertising = result.getScanRecord().getBytes();
-    try {
-      if(!result.getDevice().getName().equals(""))
-        object.put("Name", result.getDevice().getName());
-      object.put("id", result.getDevice().getAddress());
-      object.put("axex", subObject);
-    }catch (Exception e){
-
-    }
-    return object;
-  }
-
 }
