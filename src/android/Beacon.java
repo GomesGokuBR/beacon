@@ -15,6 +15,7 @@ import android.os.Build;
 import android.support.annotation.RequiresApi;
 import android.util.Base64;
 import android.util.JsonReader;
+import android.util.Log;
 
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
@@ -29,6 +30,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.apache.cordova.device.Device.TAG;
 
 /**
  * This class echoes a string called from JavaScript.
@@ -89,7 +92,11 @@ public class Beacon extends CordovaPlugin {
       }
     } else {
       jsonResponse.put("error", false);
-      jsonResponse.put("message", "Probleme avec la func initAdapter");
+      if (this.bluetoothAdapter.isEnabled())
+        jsonResponse.put("bleIsActived", true);
+      else
+        jsonResponse.put("bleIsActived", false);
+      callbackContext.success(jsonResponse);
     }
   }
 
@@ -216,27 +223,27 @@ public class Beacon extends CordovaPlugin {
         axeZ += bytes[8] << 8;
 
         //AxesN-1
-        int axeXn1 = bytes[9];
+        int axeXn1 = bytes[11];
         axeXn1 += bytes[10] << 8;
-        int axeYn1 = bytes[11];
+        int axeYn1 = bytes[13];
         axeYn1 += bytes[12] << 8;
-        int axeZn1 = bytes[13];
+        int axeZn1 = bytes[15];
         axeZn1 += bytes[14] << 8;
 
-        //AxesN-1
-        int axeXn2 = bytes[15];
+        //AxesN-2
+        int axeXn2 = bytes[17];
         axeXn2 += bytes[16] << 8;
-        int axeYn2 = bytes[17];
+        int axeYn2 = bytes[19];
         axeYn2 += bytes[18] << 8;
-        int axeZn2 = bytes[13];
-        axeZn2 += bytes[19] << 8;
+        int axeZn2 = bytes[21];
+        axeZn2 += bytes[20] << 8;
 
         //Index
-        int index = bytes[20];
-        index += bytes[21] << 8;
-        index += bytes[22] << 16;
-        index += bytes[23] << 24;
+        byte[] bytesIndex = {bytes[25], bytes[24], bytes[23], bytes[22]};
+        int index = ByteBuffer.wrap(bytesIndex, 0, 4).getInt();
 
+        //mode
+        int mode = bytes[26];
         try {
           axesN.put("x", axeX);
           axesN.put("y", axeY);
@@ -265,6 +272,7 @@ public class Beacon extends CordovaPlugin {
           jsonResponse.put("id", result.getDevice().getAddress());
           jsonResponse.put("advertising", axes);
           jsonResponse.put("index", index);
+          jsonResponse.put("mode", mode);
         } catch (JSONException e) {
           PluginResult result1 = new PluginResult(PluginResult.Status.OK, "Erreur create response : " + e.getMessage());
           result1.setKeepCallback(true);
