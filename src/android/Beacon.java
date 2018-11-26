@@ -52,7 +52,8 @@ public class Beacon extends CordovaPlugin {
       return true;
     }
     if (action.equals("scan")) {
-      this.scan(callbackContext);
+      JSONArray macs = (JSONArray) args.get(0);
+      this.scan(macs, callbackContext);
       return true;
     }
     if (action.equals("stopScan")) {
@@ -101,7 +102,7 @@ public class Beacon extends CordovaPlugin {
   }
 
   @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-  private void scan(CallbackContext callbackContext) throws JSONException {
+  private void scan(JSONArray macs, CallbackContext callbackContext) throws JSONException {
     JSONObject jsonResponse = new JSONObject();
     if (this.etatAdapterBLE) {
       if (this.bluetoothAdapter.isEnabled()) {
@@ -111,8 +112,14 @@ public class Beacon extends CordovaPlugin {
 
           bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
           ScanFilter filter = getScanFilter();
+
           List<ScanFilter> scanFilters = new ArrayList<ScanFilter>();
-          // scanFilters.add(filter);
+          for (int i = 0; i < macs.length(); i++) {
+            ScanFilter.Builder builder = new ScanFilter.Builder();
+            builder.setDeviceAddress((String) macs.get(i));
+            scanFilters.add(builder.build());
+          }
+
           ScanSettings scanSettings = getScanSettings();
           bluetoothLeScanner.startScan(scanFilters, scanSettings, mScanCallback);
         } catch (Exception e) {
@@ -138,6 +145,7 @@ public class Beacon extends CordovaPlugin {
     }
   }
 
+  @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
   private void stopScan(CallbackContext callbackContext) throws JSONException {
     JSONObject jsonResponse = new JSONObject();
     if (this.etatAdapterBLE) {
@@ -174,6 +182,7 @@ public class Beacon extends CordovaPlugin {
     callbackContext.success(jsonResponse);
   }
 
+  @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
   private void purgeBLE(CallbackContext callbackContext) throws JSONException {
     JSONObject jsonResponse = new JSONObject();
     if (this.etatAdapterBLE) {
@@ -200,89 +209,86 @@ public class Beacon extends CordovaPlugin {
     @Override
     public void onScanResult(int callbackType, ScanResult result) {
       String mac = result.getDevice().getAddress();
-      if (mac.equals("03:80:E1:00:34:12") || mac.equals("03:80:E1:00:34:13") || mac.equals("03:80:E1:00:34:14")
-        || mac.equals("03:80:E1:00:34:15") || mac.equals("03:80:E1:00:34:16")
-        || mac.equals("03:80:E1:00:34:17") || mac.equals("03:80:E1:00:34:18")
-        || mac.equals("03:80:E1:00:34:19") || mac.equals("03:80:E1:00:34:20")) {
+      Log.d(TAG, mac);
 
-        JSONObject jsonResponse = new JSONObject();
+      JSONObject jsonResponse = new JSONObject();
 
-        JSONObject axes = new JSONObject();
-        JSONObject axesN = new JSONObject();
-        JSONObject axesN1 = new JSONObject();
-        JSONObject axesN2 = new JSONObject();
+      JSONObject axes = new JSONObject();
+      JSONObject axesN = new JSONObject();
+      JSONObject axesN1 = new JSONObject();
+      JSONObject axesN2 = new JSONObject();
 
-        byte[] bytes = result.getScanRecord().getBytes();
+      byte[] bytes = result.getScanRecord().getBytes();
 
-        //Axex N
-        int axeX = bytes[5];
-        axeX += bytes[4] << 8;
-        int axeY = bytes[7];
-        axeY += bytes[6] << 8;
-        int axeZ = bytes[9];
-        axeZ += bytes[8] << 8;
+      // Axex N
+      int axeX = bytes[5];
+      axeX += bytes[4] << 8;
+      int axeY = bytes[7];
+      axeY += bytes[6] << 8;
+      int axeZ = bytes[9];
+      axeZ += bytes[8] << 8;
 
-        //AxesN-1
-        int axeXn1 = bytes[11];
-        axeXn1 += bytes[10] << 8;
-        int axeYn1 = bytes[13];
-        axeYn1 += bytes[12] << 8;
-        int axeZn1 = bytes[15];
-        axeZn1 += bytes[14] << 8;
+      // AxesN-1
+      int axeXn1 = bytes[11];
+      axeXn1 += bytes[10] << 8;
+      int axeYn1 = bytes[13];
+      axeYn1 += bytes[12] << 8;
+      int axeZn1 = bytes[15];
+      axeZn1 += bytes[14] << 8;
 
-        //AxesN-2
-        int axeXn2 = bytes[17];
-        axeXn2 += bytes[16] << 8;
-        int axeYn2 = bytes[19];
-        axeYn2 += bytes[18] << 8;
-        int axeZn2 = bytes[21];
-        axeZn2 += bytes[20] << 8;
+      // AxesN-2
+      int axeXn2 = bytes[17];
+      axeXn2 += bytes[16] << 8;
+      int axeYn2 = bytes[19];
+      axeYn2 += bytes[18] << 8;
+      int axeZn2 = bytes[21];
+      axeZn2 += bytes[20] << 8;
 
-        //Index
-        byte[] bytesIndex = {bytes[25], bytes[24], bytes[23], bytes[22]};
-        int index = ByteBuffer.wrap(bytesIndex, 0, 4).getInt();
+      // Index
+      byte[] bytesIndex = { bytes[25], bytes[24], bytes[23], bytes[22] };
+      int index = ByteBuffer.wrap(bytesIndex, 0, 4).getInt();
 
-        //mode
-        int mode = bytes[26];
-        try {
-          axesN.put("x", axeX);
-          axesN.put("y", axeY);
-          axesN.put("z", axeZ);
+      // mode
+      int mode = bytes[26];
+      try {
+        axesN.put("x", axeX);
+        axesN.put("y", axeY);
+        axesN.put("z", axeZ);
 
-          axesN1.put("xn1", axeXn1);
-          axesN1.put("yn1", axeYn1);
-          axesN1.put("zn1", axeZn1);
+        axesN1.put("xn1", axeXn1);
+        axesN1.put("yn1", axeYn1);
+        axesN1.put("zn1", axeZn1);
 
-          axesN2.put("xn2", axeXn2);
-          axesN2.put("yn2", axeYn2);
-          axesN2.put("zn2", axeZn2);
+        axesN2.put("xn2", axeXn2);
+        axesN2.put("yn2", axeYn2);
+        axesN2.put("zn2", axeZn2);
 
-          axes.put("N", axesN);
-          axes.put("N1", axesN1);
-          axes.put("N2", axesN2);
-        } catch (JSONException e) {
-          e.printStackTrace();
-          PluginResult result1 = new PluginResult(PluginResult.Status.OK, "Erreur decode payload : " + e.getMessage());
-          result1.setKeepCallback(true);
-          discoverBLECallbackContext.sendPluginResult(result1);
-        }
-        try {
-          jsonResponse.put("name", result.getDevice().getName());
-          jsonResponse.put("rssi", result.getRssi());
-          jsonResponse.put("id", result.getDevice().getAddress());
-          jsonResponse.put("advertising", axes);
-          jsonResponse.put("index", index);
-          jsonResponse.put("mode", mode);
-        } catch (JSONException e) {
-          PluginResult result1 = new PluginResult(PluginResult.Status.OK, "Erreur create response : " + e.getMessage());
-          result1.setKeepCallback(true);
-          discoverBLECallbackContext.sendPluginResult(result1);
-        }
-        PluginResult result1 = new PluginResult(PluginResult.Status.OK, jsonResponse);
+        axes.put("N", axesN);
+        axes.put("N1", axesN1);
+        axes.put("N2", axesN2);
+      } catch (JSONException e) {
+        e.printStackTrace();
+        PluginResult result1 = new PluginResult(PluginResult.Status.OK, "Erreur decode payload : " + e.getMessage());
         result1.setKeepCallback(true);
         discoverBLECallbackContext.sendPluginResult(result1);
       }
+      try {
+        jsonResponse.put("name", result.getDevice().getName());
+        jsonResponse.put("rssi", result.getRssi());
+        jsonResponse.put("id", result.getDevice().getAddress());
+        jsonResponse.put("advertising", axes);
+        jsonResponse.put("index", index);
+        jsonResponse.put("mode", mode);
+      } catch (JSONException e) {
+        PluginResult result1 = new PluginResult(PluginResult.Status.OK, "Erreur create response : " + e.getMessage());
+        result1.setKeepCallback(true);
+        discoverBLECallbackContext.sendPluginResult(result1);
+      }
+      PluginResult result1 = new PluginResult(PluginResult.Status.OK, jsonResponse);
+      result1.setKeepCallback(true);
+      discoverBLECallbackContext.sendPluginResult(result1);
     }
+
   };
 
   @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
