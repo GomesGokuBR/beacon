@@ -34,7 +34,7 @@ import java.util.List;
 import static org.apache.cordova.device.Device.TAG;
 
 /**
- * This class echoes a string called from JavaScript.
+ * This classe echoes a string called from JavaScript.
  */
 public class Beacon extends CordovaPlugin {
 
@@ -217,6 +217,7 @@ public class Beacon extends CordovaPlugin {
       JSONObject axesN = new JSONObject();
       JSONObject axesN1 = new JSONObject();
       JSONObject axesN2 = new JSONObject();
+      JSONObject app2 = new JSONObject();
 
       byte[] bytes = result.getScanRecord().getBytes();
 
@@ -250,6 +251,24 @@ public class Beacon extends CordovaPlugin {
 
       // mode
       int mode = bytes[26];
+
+      //app2
+      byte[] bytesApp2NFft = {bytes[4],bytes[5],bytes[6],bytes[7]};
+      byte[] bytesApp2N1Fft = {bytes[10],bytes[11],bytes[12],bytes[13]};
+      byte[] bytesApp2N2Fft = {bytes[16],bytes[17],bytes[18],bytes[19]};
+
+      int app2NFFT = ByteBuffer.wrap(bytesApp2NFft, 0, 4).getInt();
+      int app2Nindex = bytes[9];
+      app2Nindex += bytes[8] << 8;
+
+      int app2N1FFT = ByteBuffer.wrap(bytesApp2N1Fft, 0, 4).getInt();
+      int app2N1index = bytes[15];
+      app2N1index += bytes[14];
+
+      int app2N2FFT = ByteBuffer.wrap(bytesApp2N2Fft, 0, 4).getInt();
+      int app2N2index = bytes[21];
+      app2N1index += bytes[20];
+
       try {
         axesN.put("x", axeX);
         axesN.put("y", axeY);
@@ -266,6 +285,25 @@ public class Beacon extends CordovaPlugin {
         axes.put("N", axesN);
         axes.put("N1", axesN1);
         axes.put("N2", axesN2);
+
+        //Json FFT
+        JSONObject FFTN = new JSONObject();
+        FFTN.put("FFT", app2NFFT);
+        FFTN.put("index", app2Nindex);
+        app2.put("FFTN", FFTN);
+
+        JSONObject FFTN1 = new JSONObject();
+        FFTN1.put("FFT", app2N1FFT);
+        FFTN1.put("index", app2N1index);
+        app2.put("FFTN1", FFTN1);
+
+        JSONObject FFTN2 = new JSONObject();
+        FFTN2.put("FFT", app2N2FFT);
+        FFTN2.put("index", app2N2index);
+        app2.put("FFTN2", FFTN2);
+
+
+
       } catch (JSONException e) {
         e.printStackTrace();
         PluginResult result1 = new PluginResult(PluginResult.Status.OK, "Erreur decode payload : " + e.getMessage());
@@ -279,6 +317,7 @@ public class Beacon extends CordovaPlugin {
         jsonResponse.put("advertising", axes);
         jsonResponse.put("index", index);
         jsonResponse.put("mode", mode);
+        jsonResponse.put("FFT", app2);
       } catch (JSONException e) {
         PluginResult result1 = new PluginResult(PluginResult.Status.OK, "Erreur create response : " + e.getMessage());
         result1.setKeepCallback(true);
